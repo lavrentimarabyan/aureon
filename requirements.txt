@@ -6,3 +6,6 @@ ccxt>=2.0.0  # For multi-exchange support
 python-dotenv>=0.19.0  # For environment variables
 pytest>=7.0.0  # For testing 
 python-telegram-bot
+ccxt
+python-dotenv
+telegram

@@ -23,8 +23,8 @@ from strategy.config import StrategyConfig, PRODUCTION_CONFIG
 
 # Set up logging
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,  # Changed from DEBUG to INFO
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Simplified format
     handlers=[
         logging.FileHandler('trading.log'),
         logging.StreamHandler()

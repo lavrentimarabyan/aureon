@@ -45,9 +45,9 @@ class StrategyConfig:
 
     # Timeframes to analyze
     timeframes: List[str] = field(default_factory=lambda: [
-        "1h",
-        "4h",
-        "1d"
+        "15m",
+        "30m",
+        "1h"
     ])
 
     # Exchange configuration

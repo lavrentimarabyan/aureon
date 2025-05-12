@@ -34,13 +34,18 @@ class StrategyConfig:
     use_market_orders: bool = True
     default_leverage: float = 15.0
 
-    # Trading pairs to monitor
+    # Extended pairs list
+    all_trading_pairs: List[str] = field(default_factory=lambda: [
+        "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "ADA/USDT",
+        "DOT/USDT", "MATIC/USDT", "LINK/USDT", "XRP/USDT", "AVAX/USDT",
+        "ATOM/USDT", "UNI/USDT", "DOGE/USDT", "SHIB/USDT", "LTC/USDT"
+    ])
+    
+    # Active trading pairs (will be updated dynamically)
     trading_pairs: List[str] = field(default_factory=lambda: [
         "BTC/USDT",
         "ETH/USDT",
-        "BNB/USDT",
-        "SOL/USDT",
-        "ADA/USDT"
+        "BNB/USDT"
     ])
 
     # Timeframes to analyze

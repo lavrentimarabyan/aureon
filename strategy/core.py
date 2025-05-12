@@ -223,3 +223,25 @@ class TrendFollowingStrategy:
         atr = tr.rolling(window=self.atr_period).mean()
         
         return atr 
+
+    async def select_active_pairs(self, exchange) -> List[str]:
+        """Select top pairs based on volume and volatility"""
+        active_pairs = []
+        
+        for pair in self.config.all_trading_pairs:
+            try:
+                ticker = await exchange.fetch_ticker(pair)
+                volume_usd = ticker['quoteVolume']  # 24h volume in USDT
+                
+                # Check volume and volatility
+                if (volume_usd > self.config.min_volume_24h and
+                    abs(ticker['percentage']) > 1.0):  # >1% 24h change
+                    active_pairs.append(pair)
+                    
+                if len(active_pairs) >= 5:  # Limit to top 5 pairs
+                    break
+                    
+            except Exception as e:
+                continue
+                
+        return active_pairs or self.config.trading_pairs[:3]  # Fallback to top 3

@@ -36,25 +36,25 @@ def load_environment():
     """Load environment variables and verify API credentials."""
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     logger.debug(f"Looking for .env file at: {env_path}")
-    
+
     if not os.path.exists(env_path):
         raise FileNotFoundError(f".env file not found at {env_path}")
-    
+
     load_dotenv(env_path)
     api_key = os.getenv('EXCHANGE_API_KEY')
     api_secret = os.getenv('EXCHANGE_API_SECRET')
     telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
     telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
-    
+
     if not api_key or not api_secret:
         raise ValueError("API credentials not found in environment variables")
     if not telegram_token or not telegram_chat_id:
         raise ValueError("Telegram credentials not found in environment variables")
-    
+
     # Log API key details (first 4 and last 4 characters only)
     masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "***"
     logger.info(f"Loaded API key: {masked_key}")
-    
+
     return api_key, api_secret, telegram_token, telegram_chat_id
 
 class SignalBot:
@@ -65,13 +65,13 @@ class SignalBot:
     ):
         self.config = config
         self.exchange_id = exchange_id
-        
+
         # Load environment variables
         self.api_key, self.api_secret, self.telegram_token, self.telegram_chat_id = load_environment()
-        
+
         # Initialize exchange
         self.exchange = self._initialize_exchange()
-        
+
         # Initialize strategy components
         self.strategy = TrendFollowingStrategy(
             rsi_period=config.rsi_period,
@@ -87,13 +87,13 @@ class SignalBot:
             atr_period=config.atr_period,
             risk_per_trade=config.risk_per_trade
         )
-        
+
         # Initialize Telegram bot
         self.telegram_bot = Application.builder().token(self.telegram_token).build()
-        
+
         # Store market data
         self.market_data: Dict[str, Dict[str, pd.DataFrame]] = {}
-        
+
         # Store last sent signals to avoid duplicates
         self.last_signals: Dict[str, TradeSignal] = {}
 
@@ -102,7 +102,7 @@ class SignalBot:
         try:
             # Log the request details
             logger.debug("Attempting to fetch account information...")
-            
+
             # Try to fetch account information
             balance = await self.exchange.fetch_balance()
             logger.info("API credentials validated successfully")
@@ -121,7 +121,7 @@ class SignalBot:
         try:
             # Initialize exchange with loaded credentials
             exchange_class = getattr(ccxt, self.exchange_id)
-            
+
             # Configure exchange options
             exchange_options = {
                 'apiKey': self.api_key,
@@ -141,17 +141,17 @@ class SignalBot:
                     }
                 }
             }
-            
+
             # Log exchange configuration
             logger.debug("Initializing exchange with options:")
             logger.debug(f"Exchange ID: {self.exchange_id}")
             logger.debug(f"Default Type: {exchange_options['options']['defaultType']}")
             logger.debug(f"Contract Type: {exchange_options['options']['defaultContractType']}")
-            
+
             exchange = exchange_class(exchange_options)
             logger.info("Exchange initialized successfully")
             return exchange
-            
+
         except Exception as e:
             logger.error(f"Error initializing exchange: {str(e)}")
             raise
@@ -170,7 +170,7 @@ class SignalBot:
                 timeframe=timeframe,
                 limit=limit
             )
-            
+
             df = pd.DataFrame(
                 ohlcv,
                 columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
@@ -184,14 +184,14 @@ class SignalBot:
             })
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
-            
+
             logger.info(f"Successfully fetched {len(df)} candles for {symbol}")
             return df
-            
+
         except Exception as e:
             logger.error(f"Error fetching OHLCV data for {symbol}: {str(e)}")
             return pd.DataFrame()
-            
+
         except Exception as e:
             logger.error(f"Error fetching OHLCV data: {str(e)}")
             return pd.DataFrame()
@@ -228,7 +228,7 @@ class SignalBot:
                 f"- Max position size: {self.config.max_position_size} USDT\n"
                 f"- Max daily loss: {self.config.max_daily_loss:.1%}\n"
             )
-            
+
             # Send the message
             await self.telegram_bot.bot.send_message(
                 chat_id=self.telegram_chat_id,
@@ -236,7 +236,7 @@ class SignalBot:
                 parse_mode='Markdown'
             )
             logger.info(f"Signal sent for {symbol}")
-            
+
         except Exception as e:
             logger.error(f"Error sending signal: {str(e)}")
 
@@ -247,25 +247,25 @@ class SignalBot:
             highest_tf = self.config.timeframes[-1]
             if highest_tf not in self.market_data[symbol]:
                 continue
-                
+
             df = self.market_data[symbol][highest_tf]
-            
+
             # Analyze market
             direction, confidence = self.strategy.analyze_market(df)
-            
+
             if direction != TradeDirection.NEUTRAL and confidence >= 0.50:
                 # Get entry timeframe data for precise entry
                 entry_tf = self.config.timeframes[0]  # Use lowest timeframe for entry
                 if entry_tf not in self.market_data[symbol]:
                     continue
-                    
+
                 entry_df = self.market_data[symbol][entry_tf]
                 latest = entry_df.iloc[-1]
-                
+
                 # Calculate stop loss and take profit
                 atr = latest['atr']
                 entry_price = latest['close']
-                
+
                 # Create signal
                 signal = TradeSignal(
                     direction=direction,
@@ -276,16 +276,16 @@ class SignalBot:
                     position_size=0.0,  # Not needed for signals
                     timestamp=latest.name
                 )
-                
+
                 # Check if this is a new signal
                 last_signal = self.last_signals.get(symbol)
                 if (not last_signal or 
                     last_signal.direction != signal.direction or 
                     (latest.name - last_signal.timestamp).total_seconds() > 3600):  # 1 hour minimum between signals
-                    
+
                     # Send the signal
                     await self.send_signal(symbol, signal)
-                    
+
                     # Update last signal
                     self.last_signals[symbol] = signal
 
@@ -295,32 +295,36 @@ class SignalBot:
             # Validate API credentials first
             if not await self._validate_api_credentials():
                 raise ValueError("Failed to validate API credentials")
-            
+
             # Start the Telegram bot
             await self.telegram_bot.initialize()
             await self.telegram_bot.start()
-            
+
             # Send startup message
             await self.telegram_bot.bot.send_message(
                 chat_id=self.telegram_chat_id,
                 text="🚀 Signal Bot Started\nMonitoring markets for trading opportunities..."
             )
-            
+
             while True:
                 try:
+                    # Update trading pairs dynamically
+                    self.config.trading_pairs = await self.strategy.select_active_pairs(self.exchange)
+                    logger.info(f"Selected pairs for trading: {self.config.trading_pairs}")
+
                     # Update market data
                     await self.update_market_data()
-                    
+
                     # Analyze markets and send signals
                     await self.analyze_markets()
-                    
+
                     # Wait before next iteration
                     await asyncio.sleep(60)  # Check every minute
-                    
+
                 except Exception as e:
                     logger.error(f"Error in main loop: {str(e)}")
                     await asyncio.sleep(60)  # Wait before retrying
-                    
+
         except Exception as e:
             logger.error(f"Fatal error: {str(e)}")
         finally:
@@ -334,7 +338,7 @@ async def main():
         config=PRODUCTION_CONFIG,
         exchange_id='binance'
     )
-    
+
     try:
         await bot.start()
     except KeyboardInterrupt:
@@ -343,4 +347,4 @@ async def main():
         logger.error(f"Bot stopped due to error: {str(e)}")
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

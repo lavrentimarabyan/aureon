@@ -240,7 +240,7 @@ class SignalBot:
             # Analyze market
             direction, confidence = self.strategy.analyze_market(df)
             
-            if direction != TradeDirection.NEUTRAL and confidence >= 0.85:
+            if direction != TradeDirection.NEUTRAL and confidence >= 0.50:
                 # Get entry timeframe data for precise entry
                 entry_tf = self.config.timeframes[0]  # Use lowest timeframe for entry
                 if entry_tf not in self.market_data[symbol]:

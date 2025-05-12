@@ -87,6 +87,8 @@ class SignalBot:
             atr_period=config.atr_period,
             risk_per_trade=config.risk_per_trade
         )
+        # Pass config to strategy
+        self.strategy.config = config
 
         # Initialize Telegram bot
         self.telegram_bot = Application.builder().token(self.telegram_token).build()

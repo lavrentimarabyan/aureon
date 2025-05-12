@@ -164,6 +164,7 @@ class SignalBot:
     ) -> pd.DataFrame:
         """Fetch OHLCV data for a symbol."""
         try:
+            logger.debug(f"Fetching OHLCV data for {symbol} ({timeframe})")
             ohlcv = await self.exchange.fetch_ohlcv(
                 symbol,
                 timeframe=timeframe,
@@ -174,10 +175,22 @@ class SignalBot:
                 ohlcv,
                 columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
             )
+            df = df.astype({
+                'open': 'float64',
+                'high': 'float64',
+                'low': 'float64',
+                'close': 'float64',
+                'volume': 'float64'
+            })
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
             
+            logger.info(f"Successfully fetched {len(df)} candles for {symbol}")
             return df
+            
+        except Exception as e:
+            logger.error(f"Error fetching OHLCV data for {symbol}: {str(e)}")
+            return pd.DataFrame()
             
         except Exception as e:
             logger.error(f"Error fetching OHLCV data: {str(e)}")

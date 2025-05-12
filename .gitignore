@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/main.cpython-313.pyc
+strategy/__pycache__/config.cpython-313.pyc
+strategy/__pycache__/core.cpython-313.pyc
+strategy/__pycache__/risk_manager.cpython-313.pyc
+strategy/__pycache__/trade_executor.cpython-313.pyc
+trading.log
+.env
